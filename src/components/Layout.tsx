@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, CreditCard, MailPlus, PlusCircle } from "lucide-react";
 import { useSubscriptions } from "../context/SubscriptionContext";
+import NotificationBell from "./NotificationBell";
+import UserMenu from "./UserMenu";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -25,9 +27,15 @@ export default function Layout() {
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col pb-20 lg:pb-0">
-        {/* Mobile top bar */}
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-          <Brand />
+        {/* Top bar: brand on mobile, actions on the right everywhere */}
+        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:justify-end lg:px-10">
+          <div className="lg:hidden">
+            <Brand />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <NotificationBell />
+            <UserMenu />
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">

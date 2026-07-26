@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, MailPlus, Check, AlertTriangle } from "lucide-react";
+import { Sparkles, MailPlus, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { useSubscriptions } from "../context/SubscriptionContext";
 import { parseReceipt, splitEmails } from "../lib/parser";
 import { SAMPLE_EMAILS } from "../data/sampleData";
 import type { ParsedReceipt, Subscription } from "../types";
 import { findService } from "../data/services";
 import { newId } from "../lib/storage";
+import { fetchReceiptEmails, isGmailConfigured } from "../lib/gmail";
 import Avatar from "../components/Avatar";
 import { cycleLabel, formatMoney } from "../lib/money";
 
@@ -21,9 +22,11 @@ export default function ImportEmail() {
   const [raw, setRaw] = useState("");
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [imported, setImported] = useState(0);
+  const [gmailBusy, setGmailBusy] = useState(false);
+  const [gmailError, setGmailError] = useState<string | null>(null);
 
-  function scan() {
-    const emails = splitEmails(raw);
+  function scan(text = raw) {
+    const emails = splitEmails(text);
     const parsed = emails
       .map((e, i) => ({ ...parseReceipt(e), key: `c_${i}`, selected: true }))
       .filter((c) => c.amount !== null || c.matchedService);
@@ -34,6 +37,25 @@ export default function ImportEmail() {
   function loadSample() {
     setRaw(SAMPLE_EMAILS);
     setCandidates(null);
+  }
+
+  async function pullGmail() {
+    setGmailBusy(true);
+    setGmailError(null);
+    try {
+      const emails = await fetchReceiptEmails(25);
+      if (emails.length === 0) {
+        setGmailError("No receipt emails found in the last year.");
+        return;
+      }
+      const joined = emails.join("\n\n---\n\n");
+      setRaw(joined);
+      scan(joined);
+    } catch (e) {
+      setGmailError(e instanceof Error ? e.message : "Gmail import failed");
+    } finally {
+      setGmailBusy(false);
+    }
   }
 
   function toggle(key: string) {
@@ -84,19 +106,41 @@ export default function ImportEmail() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4 text-sm text-brand-700">
-        <p className="flex items-center gap-1.5 font-medium">
-          <Sparkles size={15} /> How it works
-        </p>
-        <p className="mt-1 text-brand-600/90">
-          In production this reads receipts straight from Gmail. For the demo, paste raw emails
-          (or load the samples) and we'll extract subscriptions with the same rule-based engine.
-        </p>
+      {/* Gmail connect — the real auto-pull path */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              <Sparkles size={15} className="text-brand-600" /> Connect Gmail
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Read receipt emails from the last year and detect subscriptions automatically.
+            </p>
+          </div>
+          <button
+            onClick={pullGmail}
+            disabled={gmailBusy || !isGmailConfigured}
+            title={isGmailConfigured ? "" : "Set VITE_GOOGLE_CLIENT_ID to enable"}
+            className="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-40"
+          >
+            {gmailBusy ? <Loader2 size={15} className="animate-spin" /> : <MailPlus size={15} />}
+            {gmailBusy ? "Reading inbox…" : "Pull from Gmail"}
+          </button>
+        </div>
+        {!isGmailConfigured && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            Gmail import needs a Google OAuth Client ID in <code>VITE_GOOGLE_CLIENT_ID</code>. See
+            the README. You can still paste receipts manually below.
+          </p>
+        )}
+        {gmailError && (
+          <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600">{gmailError}</p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-sm font-medium text-slate-700">Receipt emails</label>
+          <label className="text-sm font-medium text-slate-700">Or paste receipt emails</label>
           <button onClick={loadSample} className="text-xs font-medium text-brand-600 hover:underline">
             Load sample emails
           </button>
@@ -110,7 +154,7 @@ export default function ImportEmail() {
         />
         <div className="mt-3 flex justify-end">
           <button
-            onClick={scan}
+            onClick={() => scan()}
             disabled={!raw.trim()}
             className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-40"
           >

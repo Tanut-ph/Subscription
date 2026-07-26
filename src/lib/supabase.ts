@@ -7,5 +7,14 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 export const isSupabaseEnabled = Boolean(url && anonKey);
 
 export const supabase: SupabaseClient | null = isSupabaseEnabled
-  ? createClient(url as string, anonKey as string)
+  ? createClient(url as string, anonKey as string, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    })
   : null;
+
+/** Current signed-in user id, read from the locally cached session (no network). */
+export async function currentUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id ?? null;
+}

@@ -48,8 +48,52 @@ src/
   pages/               Dashboard, Subscriptions, ImportEmail, AddSubscription
 ```
 
+## Supabase setup
+
+1. Create `.env` from `.env.example` and fill `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
+   (Dashboard → Project Settings → API — use the **anon/publishable** key).
+2. Run `supabase/schema.sql` in the SQL editor (table + demo RLS + seed).
+
+The app auto-detects the env vars: with them it runs on Supabase, without them it
+falls back to localStorage.
+
+## Auth (per-user data)
+
+Login (email/password + magic link) is gated in when Supabase is configured.
+
+1. Run `supabase/auth-migration.sql` — adds `user_id`, swaps the demo RLS for
+   per-user policies, and creates `notification_prefs`.
+2. To test with password login without email links, turn **off** "Confirm email"
+   under Dashboard → Authentication → Providers → Email (or use magic links).
+3. (Optional) Enable the Google provider in the dashboard to add Google sign-in.
+
+Each signed-in user sees only their own subscriptions. New users start empty and
+can seed samples with the in-app **Reset demo** button.
+
+## Renewal notifications
+
+- **In-app + desktop**: the bell in the top bar lists upcoming renewals and (with
+  permission) fires Web Notifications. The "notify N days before" setting is saved
+  to `notification_prefs` (or localStorage when signed out).
+- **Email (production)**: deploy the Edge Function and schedule it:
+  ```bash
+  supabase functions deploy renewal-reminders
+  supabase secrets set RESEND_API_KEY=... RESEND_FROM="SubTrack <alerts@yourdomain>"
+  ```
+  Then run `supabase/cron.sql` (fill in the service-role key) to send daily emails.
+
+## Gmail auto-pull
+
+Reads receipt emails directly from Gmail (browser-side OAuth, no backend).
+
+1. Google Cloud Console → enable the **Gmail API**.
+2. Create an **OAuth 2.0 Client ID (Web)**; add your origin (e.g.
+   `http://localhost:5173`) to *Authorized JavaScript origins*.
+3. Put the client id in `VITE_GOOGLE_CLIENT_ID`.
+4. The **Pull from Gmail** button on the Auto Pull page then reads recent receipts
+   and runs them through the same `parseReceipt()` engine.
+
 ## Next steps
 
-- Swap `src/lib/storage.ts` for a Supabase adapter + auth for multi-user/live data.
-- Replace the paste-emails flow with a Gmail API connector feeding `parseReceipt()`.
 - Live FX rates in `src/lib/analytics.ts` (currently rough static rates).
+- Store Gmail history id to pull only new receipts incrementally.

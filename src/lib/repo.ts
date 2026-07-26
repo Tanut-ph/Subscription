@@ -1,6 +1,6 @@
 import type { Subscription } from "../types";
 import { store } from "./storage";
-import { isSupabaseEnabled, supabase } from "./supabase";
+import { currentUserId, isSupabaseEnabled, supabase } from "./supabase";
 import { SAMPLE_SUBSCRIPTIONS } from "../data/sampleData";
 
 const TABLE = "subscriptions";
@@ -42,7 +42,7 @@ function rowToSub(r: Row): Subscription {
   };
 }
 
-function subToRow(s: Subscription): Row {
+function subToRow(s: Subscription, userId?: string | null): Row & { user_id?: string } {
   return {
     id: s.id,
     name: s.name,
@@ -58,6 +58,7 @@ function subToRow(s: Subscription): Row {
     origin: s.origin,
     note: s.note ?? null,
     created_at: s.createdAt,
+    ...(userId ? { user_id: userId } : {}),
   };
 }
 
@@ -84,7 +85,8 @@ export const repo = {
       store.add(sub);
       return;
     }
-    const { error } = await supabase.from(TABLE).insert(subToRow(sub));
+    const uid = await currentUserId();
+    const { error } = await supabase.from(TABLE).insert(subToRow(sub, uid));
     if (error) throw error;
   },
 
@@ -94,7 +96,8 @@ export const repo = {
       for (const s of subs) store.add(s);
       return;
     }
-    const { error } = await supabase.from(TABLE).insert(subs.map(subToRow));
+    const uid = await currentUserId();
+    const { error } = await supabase.from(TABLE).insert(subs.map((s) => subToRow(s, uid)));
     if (error) throw error;
   },
 
@@ -126,11 +129,15 @@ export const repo = {
     if (error) throw error;
   },
 
-  /** Reset back to the sample dataset. */
+  /** Reset back to the sample dataset (scoped to the current user under RLS). */
   async reset(): Promise<Subscription[]> {
     if (!supabase) return store.reset();
+    const uid = await currentUserId();
+    // RLS limits this delete to the current user's rows.
     await supabase.from(TABLE).delete().neq("id", "");
-    const { error } = await supabase.from(TABLE).insert(SAMPLE_SUBSCRIPTIONS.map(subToRow));
+    // Fresh ids so re-seeding never collides with another user's seed rows.
+    const seeds = SAMPLE_SUBSCRIPTIONS.map((s) => subToRow({ ...s, id: `${s.id}_${uid?.slice(0, 8)}` }, uid));
+    const { error } = await supabase.from(TABLE).insert(seeds);
     if (error) throw error;
     return this.list();
   },
