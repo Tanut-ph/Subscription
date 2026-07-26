@@ -42,7 +42,7 @@ export default function ImportEmail() {
     );
   }
 
-  function importSelected() {
+  async function importSelected() {
     if (!candidates) return;
     const existing = new Set(subs.map((s) => s.name.toLowerCase()));
     const toAdd: Subscription[] = candidates
@@ -65,7 +65,7 @@ export default function ImportEmail() {
           createdAt: new Date().toISOString(),
         };
       });
-    addMany(toAdd);
+    await addMany(toAdd);
     setImported(toAdd.length);
     setTimeout(() => navigate("/subscriptions"), 900);
   }

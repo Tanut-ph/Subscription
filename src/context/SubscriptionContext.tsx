@@ -1,40 +1,75 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Subscription } from "../types";
-import { store } from "../lib/storage";
+import { repo } from "../lib/repo";
 
 interface Ctx {
   subs: Subscription[];
-  add: (sub: Subscription) => void;
-  addMany: (subs: Subscription[]) => void;
-  update: (id: string, patch: Partial<Subscription>) => void;
-  remove: (id: string) => void;
-  reset: () => void;
+  loading: boolean;
+  error: string | null;
+  usingSupabase: boolean;
+  add: (sub: Subscription) => Promise<void>;
+  addMany: (subs: Subscription[]) => Promise<void>;
+  update: (id: string, patch: Partial<Subscription>) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  reset: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<Ctx | null>(null);
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [subs, setSubs] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    try {
+      const data = await repo.list();
+      setSubs(data);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load subscriptions");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    setSubs(store.list());
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const value = useMemo<Ctx>(
     () => ({
       subs,
-      add: (sub) => setSubs(store.add(sub)),
-      addMany: (many) => {
-        let latest = store.list();
-        for (const s of many) latest = store.add(s);
-        setSubs(latest);
+      loading,
+      error,
+      usingSupabase: repo.usingSupabase,
+      add: async (sub) => {
+        await repo.add(sub);
+        await refresh();
       },
-      update: (id, patch) => setSubs(store.update(id, patch)),
-      remove: (id) => setSubs(store.remove(id)),
-      reset: () => setSubs(store.reset()),
+      addMany: async (many) => {
+        await repo.addMany(many);
+        await refresh();
+      },
+      update: async (id, patch) => {
+        // optimistic
+        setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+        await repo.update(id, patch);
+        await refresh();
+      },
+      remove: async (id) => {
+        setSubs((prev) => prev.filter((s) => s.id !== id));
+        await repo.remove(id);
+        await refresh();
+      },
+      reset: async () => {
+        const data = await repo.reset();
+        setSubs(data);
+      },
     }),
-    [subs],
+    [subs, loading, error],
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

@@ -33,10 +33,10 @@ export default function AddSubscription() {
     setSource(svc.source);
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !amount) return;
-    add({
+    await add({
       id: newId(),
       name: name.trim(),
       source: source.trim() || name.trim().toUpperCase(),

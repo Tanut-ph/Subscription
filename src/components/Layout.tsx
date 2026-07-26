@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, CreditCard, MailPlus, PlusCircle } from "lucide-react";
+import { useSubscriptions } from "../context/SubscriptionContext";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -19,12 +20,7 @@ export default function Layout() {
             <SideLink key={item.to} {...item} />
           ))}
         </nav>
-        <div className="mt-auto rounded-xl bg-brand-50 p-4 text-xs text-brand-700">
-          <p className="font-semibold">Demo mode</p>
-          <p className="mt-1 text-brand-600/80">
-            Data is stored locally in your browser. Swap the storage layer for Supabase to go live.
-          </p>
-        </div>
+        <BackendBadge />
       </aside>
 
       {/* Main */}
@@ -45,6 +41,31 @@ export default function Layout() {
           <BottomLink key={item.to} {...item} />
         ))}
       </nav>
+    </div>
+  );
+}
+
+function BackendBadge() {
+  const { usingSupabase } = useSubscriptions();
+  return (
+    <div
+      className={`mt-auto rounded-xl p-4 text-xs ${
+        usingSupabase ? "bg-emerald-50 text-emerald-700" : "bg-brand-50 text-brand-700"
+      }`}
+    >
+      <p className="flex items-center gap-1.5 font-semibold">
+        <span
+          className={`inline-block h-2 w-2 rounded-full ${
+            usingSupabase ? "bg-emerald-500" : "bg-brand-400"
+          }`}
+        />
+        {usingSupabase ? "Live · Supabase" : "Demo · Local"}
+      </p>
+      <p className={`mt-1 ${usingSupabase ? "text-emerald-600/80" : "text-brand-600/80"}`}>
+        {usingSupabase
+          ? "Synced to your Supabase project. Changes persist across devices."
+          : "Stored locally in your browser. Add Supabase env vars to go live."}
+      </p>
     </div>
   );
 }
