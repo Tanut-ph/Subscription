@@ -4,6 +4,7 @@ import { useSubscriptions } from "../context/SubscriptionContext";
 import { CATEGORIES, SERVICES, findService } from "../data/services";
 import type { BillingCycle, Category } from "../types";
 import { newId } from "../lib/storage";
+import { friendlyError } from "../lib/errors";
 import Avatar from "../components/Avatar";
 
 const CYCLES: BillingCycle[] = ["monthly", "yearly", "weekly", "quarterly"];
@@ -20,6 +21,8 @@ export default function AddSubscription() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const [nextBilling, setNextBilling] = useState(defaultNextBilling());
   const [source, setSource] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const known = findService(name);
   const color = known?.color ?? "#6366f1";
@@ -36,22 +39,30 @@ export default function AddSubscription() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !amount) return;
-    await add({
-      id: newId(),
-      name: name.trim(),
-      source: source.trim() || name.trim().toUpperCase(),
-      category,
-      amount: parseFloat(amount),
-      currency,
-      cycle,
-      nextBilling,
-      status: "active",
-      color,
-      logo,
-      origin: "manual",
-      createdAt: new Date().toISOString(),
-    });
-    navigate("/subscriptions");
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await add({
+        id: newId(),
+        name: name.trim(),
+        source: source.trim() || name.trim().toUpperCase(),
+        category,
+        amount: parseFloat(amount),
+        currency,
+        cycle,
+        nextBilling,
+        status: "active",
+        color,
+        logo,
+        origin: "manual",
+        createdAt: new Date().toISOString(),
+      });
+      navigate("/subscriptions");
+    } catch (err) {
+      setSaveError(friendlyError(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -166,6 +177,10 @@ export default function AddSubscription() {
           </Field>
         </div>
 
+        {saveError && (
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600">{saveError}</p>
+        )}
+
         <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
@@ -176,9 +191,10 @@ export default function AddSubscription() {
           </button>
           <button
             type="submit"
-            className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+            disabled={saving}
+            className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
-            Add subscription
+            {saving ? "Saving…" : "Add subscription"}
           </button>
         </div>
       </form>

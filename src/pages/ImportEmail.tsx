@@ -10,6 +10,7 @@ import { newId } from "../lib/storage";
 import { fetchReceiptEmails, isGmailConfigured } from "../lib/gmail";
 import Avatar from "../components/Avatar";
 import { cycleLabel, formatMoney } from "../lib/money";
+import { friendlyError } from "../lib/errors";
 
 interface Candidate extends ParsedReceipt {
   key: string;
@@ -24,6 +25,7 @@ export default function ImportEmail() {
   const [imported, setImported] = useState(0);
   const [gmailBusy, setGmailBusy] = useState(false);
   const [gmailError, setGmailError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   function scan(text = raw) {
     const emails = splitEmails(text);
@@ -66,6 +68,7 @@ export default function ImportEmail() {
 
   async function importSelected() {
     if (!candidates) return;
+    setImportError(null);
     const existing = new Set(subs.map((s) => s.name.toLowerCase()));
     const toAdd: Subscription[] = candidates
       .filter((c) => c.selected && !existing.has(c.name.toLowerCase()))
@@ -87,9 +90,19 @@ export default function ImportEmail() {
           createdAt: new Date().toISOString(),
         };
       });
-    await addMany(toAdd);
-    setImported(toAdd.length);
-    setTimeout(() => navigate("/subscriptions"), 900);
+
+    if (toAdd.length === 0) {
+      setImportError("All selected subscriptions already exist — nothing new to import.");
+      return;
+    }
+
+    try {
+      await addMany(toAdd);
+      setImported(toAdd.length);
+      setTimeout(() => navigate("/subscriptions"), 900);
+    } catch (err) {
+      setImportError(friendlyError(err));
+    }
   }
 
   const selectedCount = candidates?.filter((c) => c.selected).length ?? 0;
@@ -186,6 +199,10 @@ export default function ImportEmail() {
                 <CandidateRow key={c.key} c={c} onToggle={() => toggle(c.key)} />
               ))}
             </div>
+          )}
+
+          {importError && (
+            <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600">{importError}</p>
           )}
 
           {candidates.length > 0 && (
