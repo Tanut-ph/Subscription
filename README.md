@@ -93,6 +93,33 @@ Reads receipt emails directly from Gmail (browser-side OAuth, no backend).
 4. The **Pull from Gmail** button on the Auto Pull page then reads recent receipts
    and runs them through the same `parseReceipt()` engine.
 
+## Deploy (auto-deploy from GitHub)
+
+The repo is set up for zero-config auto-deploy on **Vercel** or **Netlify**
+(config files `vercel.json` / `netlify.toml` are included). Every push to `main`
+redeploys automatically.
+
+### Vercel (recommended)
+
+1. vercel.com → **Add New → Project** → import `Tanut-ph/Subscription`.
+2. Framework preset auto-detects Vite (build `npm run build`, output `dist`).
+3. Add **Environment Variables** (Settings → Environment Variables):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_GOOGLE_CLIENT_ID` (only if using Gmail auto-pull)
+4. **Deploy**. You get a URL like `https://subscription-xxx.vercel.app`.
+
+### After the first deploy — update these to your production URL
+
+- **Supabase** → Authentication → URL Configuration: set **Site URL** and add the
+  deployed URL to **Redirect URLs** (so magic-link / email confirmations return to
+  the live site).
+- **Google Cloud** → OAuth client → **Authorized JavaScript origins**: add the
+  deployed origin (e.g. `https://subscription-xxx.vercel.app`) so Gmail works there.
+
+`.env` is gitignored and never shipped — production values live in the host's env
+settings only.
+
 ## Next steps
 
 - Live FX rates in `src/lib/analytics.ts` (currently rough static rates).

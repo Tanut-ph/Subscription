@@ -1,0 +1,11 @@
+# Netlify config (alternative to Vercel). Auto-deploys on push when the repo
+# is connected in the Netlify dashboard.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback so client-side routes (/import, /subscriptions, …) work on reload.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
