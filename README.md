@@ -52,23 +52,26 @@ src/
 
 1. Create `.env` from `.env.example` and fill `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`
    (Dashboard → Project Settings → API — use the **anon/publishable** key).
-2. Run `supabase/schema.sql` in the SQL editor (table + demo RLS + seed).
+2. Run **`supabase/setup.sql`** in the SQL editor. This one file builds the whole
+   database: the per-user `subscriptions` table, row-level security, and
+   `notification_prefs`. (It supersedes the older `schema.sql` + `auth-migration.sql`.)
+3. Auth URLs: Dashboard → Authentication → **URL Configuration** → set **Site URL**
+   to your app origin (`http://localhost:5173` in dev) and add it to **Redirect URLs**
+   as `http://localhost:5173/**`, so email/magic links return to the app.
 
-The app auto-detects the env vars: with them it runs on Supabase, without them it
-falls back to localStorage.
+The app auto-detects the env vars: with them it runs on Supabase (with login),
+without them it falls back to localStorage (no login).
 
 ## Auth (per-user data)
 
 Login (email/password + magic link) is gated in when Supabase is configured.
 
-1. Run `supabase/auth-migration.sql` — adds `user_id`, swaps the demo RLS for
-   per-user policies, and creates `notification_prefs`.
-2. To test with password login without email links, turn **off** "Confirm email"
-   under Dashboard → Authentication → Providers → Email (or use magic links).
-3. (Optional) Enable the Google provider in the dashboard to add Google sign-in.
+- To test password login without email links, turn **off** "Confirm email" under
+  Dashboard → Authentication → Providers → Email (or use magic links).
+- (Optional) Enable the Google provider in the dashboard to add Google sign-in.
 
 Each signed-in user sees only their own subscriptions. New users start empty and
-can seed samples with the in-app **Reset demo** button.
+seed samples with the in-app **Reset demo** button.
 
 ## Renewal notifications
 
