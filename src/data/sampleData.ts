@@ -167,7 +167,20 @@ Subject: Payment confirmation for Disney+
 
 Your Disney+ Standard plan payment was processed.
 Amount billed: ฿289.00 monthly
-Your next payment will be on ${nextBillingText(15)}`;
+Your next payment will be on ${nextBillingText(15)}
+--------
+From: Netflix <info@netflix.com>
+Subject: Your receipt from Netflix
+
+Last month's Netflix receipt.
+Plan: Premium (Monthly)
+Total charged: ฿419.00
+Next billing date: ${nextBillingText(-26)}
+--------
+From: Spotify <no-reply@spotify.com>
+Subject: Welcome to Spotify
+
+Thanks for creating your account. No payment is due — enjoy the free trial!`;
 
 function nextBillingText(days: number): string {
   const d = new Date();

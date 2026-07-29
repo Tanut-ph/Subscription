@@ -29,10 +29,32 @@ export default function ImportEmail() {
 
   function scan(text = raw) {
     const emails = splitEmails(text);
-    const parsed = emails
-      .map((e, i) => ({ ...parseReceipt(e), key: `c_${i}`, selected: true }))
-      .filter((c) => c.amount !== null || c.matchedService);
-    setCandidates(parsed);
+
+    // Only keep receipts that actually have a charge — no price, no entry.
+    const withPrice = emails
+      .map((e) => parseReceipt(e))
+      .filter((c) => c.amount !== null && c.amount > 0);
+
+    // Collapse duplicates (same service seen across several receipts) into one,
+    // keeping the strongest match and the latest renewal date.
+    const byName = new Map<string, ParsedReceipt>();
+    for (const c of withPrice) {
+      const key = c.name.trim().toLowerCase();
+      const prev = byName.get(key);
+      const better =
+        !prev ||
+        c.confidence > prev.confidence ||
+        (c.confidence === prev.confidence && (c.nextBilling ?? "") > (prev.nextBilling ?? ""));
+      if (better) byName.set(key, c);
+    }
+
+    const deduped: Candidate[] = [...byName.values()].map((c, i) => ({
+      ...c,
+      key: `c_${i}`,
+      selected: true,
+    }));
+
+    setCandidates(deduped);
     setImported(0);
   }
 
@@ -64,6 +86,10 @@ export default function ImportEmail() {
     setCandidates((prev) =>
       prev ? prev.map((c) => (c.key === key ? { ...c, selected: !c.selected } : c)) : prev,
     );
+  }
+
+  function toggleAll(next: boolean) {
+    setCandidates((prev) => (prev ? prev.map((c) => ({ ...c, selected: next })) : prev));
   }
 
   async function importSelected() {
@@ -106,6 +132,7 @@ export default function ImportEmail() {
   }
 
   const selectedCount = candidates?.filter((c) => c.selected).length ?? 0;
+  const allSelected = !!candidates && candidates.length > 0 && candidates.every((c) => c.selected);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -182,11 +209,24 @@ export default function ImportEmail() {
             <h2 className="font-semibold text-slate-900">
               Found {candidates.length} subscription{candidates.length === 1 ? "" : "s"}
             </h2>
-            {imported > 0 && (
-              <span className="flex items-center gap-1 text-sm font-medium text-emerald-600">
-                <Check size={15} /> Imported {imported}
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {candidates.length > 0 && (
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-brand-600"
+                  />
+                  Select all
+                </label>
+              )}
+              {imported > 0 && (
+                <span className="flex items-center gap-1 text-sm font-medium text-emerald-600">
+                  <Check size={15} /> Imported {imported}
+                </span>
+              )}
+            </div>
           </div>
 
           {candidates.length === 0 ? (
