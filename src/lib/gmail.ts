@@ -61,12 +61,22 @@ export function authorize(): Promise<string> {
   });
 }
 
-/** Gmail search query targeting subscription receipts. */
+/** Extra senders whose receipts we always want (Google Play + Google payments). */
+const EXTRA_SENDERS = [
+  "googleplay-noreply@google.com",
+  "payments-noreply@google.com",
+];
+
+/**
+ * Gmail search query targeting subscription receipts — including past ones you
+ * already paid. Looks back 2 years across known services, Google Play/Google
+ * payments, and any receipt/invoice/order email.
+ */
 function receiptQuery(): string {
-  const domains = [...new Set(SERVICES.flatMap((s) => s.domains))]
+  const senders = [...new Set([...SERVICES.flatMap((s) => s.domains), ...EXTRA_SENDERS])]
     .map((d) => `from:${d}`)
     .join(" OR ");
-  return `newer_than:1y (${domains} OR subject:(receipt OR invoice OR "payment" OR subscription))`;
+  return `newer_than:2y (${senders} OR subject:(receipt OR invoice OR "payment" OR order OR subscription))`;
 }
 
 function b64urlDecode(data: string): string {
@@ -107,7 +117,7 @@ async function gapi<T>(url: string, token: string): Promise<T> {
  * Authorize (if needed) and fetch up to `max` recent receipt emails as raw
  * "From/Subject/body" text blocks ready for `parseReceipt`.
  */
-export async function fetchReceiptEmails(max = 25): Promise<string[]> {
+export async function fetchReceiptEmails(max = 60): Promise<string[]> {
   const token = await authorize();
   const base = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
   const list = await gapi<{ messages?: { id: string }[] }>(

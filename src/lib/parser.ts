@@ -63,6 +63,28 @@ function extractNextBilling(text: string): string | null {
   return null;
 }
 
+/** Is this a Google Play / Google account order receipt? */
+function isGooglePlayReceipt(text: string): boolean {
+  return /googleplay-noreply@google\.com|payments-noreply@google\.com|google\s*play\s*(order|receipt)/i.test(
+    text,
+  );
+}
+
+/**
+ * Google Play receipts list the purchased app/subscription on the same line as
+ * its price, e.g. "Duolingo Super (Duolingo)   $6.99". Pull that title out.
+ */
+function extractPlayItem(text: string): string | null {
+  for (const line of text.split(/\n/)) {
+    const m = line.match(/^(.{2,60}?)\s+(?:฿|\$|€|£|¥|thb|usd|eur|gbp|jpy)\s?[0-9]/i);
+    if (m) {
+      const name = m[1].replace(/\(.*?\)/g, "").trim(); // strip "(Publisher)"
+      if (name && !/^(item|total|subtotal|tax|order|price)\b/i.test(name)) return name;
+    }
+  }
+  return null;
+}
+
 /** Fallback: guess the service name from the subject line / sender */
 function guessName(text: string): string {
   const fromLine = text.match(/from:\s*"?([^"<\n]+)"?\s*<?[^>\n]*>?/i);
@@ -88,24 +110,36 @@ export function parseReceipt(rawEmail: string): ParsedReceipt {
   const amountMatch = extractAmount(text);
   const cycle = svc?.cycleHint ?? extractCycle(text);
   const nextBilling = extractNextBilling(text);
+  const fromPlay = isGooglePlayReceipt(text);
 
   let confidence = 0;
   if (svc) confidence += 0.5;
   if (amountMatch) confidence += 0.35;
   if (nextBilling) confidence += 0.15;
 
-  const category: Category = svc?.category ?? "Other";
+  // Resolve name/source/category. A known service inside a Play receipt (e.g.
+  // "YouTube Premium") still wins; otherwise fall back to the Play item name
+  // and label the charge as coming from Google Play.
+  let name = svc?.name;
+  let source = svc?.source;
+  let category: Category = svc?.category ?? "Other";
+
+  if (!svc && fromPlay) {
+    name = extractPlayItem(text) ?? guessName(text);
+    source = "GOOGLE PLAY";
+    confidence += 0.3; // we know the merchant, just not the catalog entry
+  }
 
   return {
-    name: svc?.name ?? guessName(text),
-    source: svc?.source ?? "UNKNOWN MERCHANT",
+    name: name ?? guessName(text),
+    source: source ?? "UNKNOWN MERCHANT",
     category,
     amount: amountMatch?.amount ?? null,
     currency: amountMatch?.currency ?? "THB",
     cycle,
     nextBilling,
     confidence: Math.min(1, confidence),
-    matchedService: !!svc,
+    matchedService: !!svc || fromPlay,
   };
 }
 

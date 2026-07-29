@@ -67,7 +67,7 @@ export default function ImportEmail() {
     setGmailBusy(true);
     setGmailError(null);
     try {
-      const emails = await fetchReceiptEmails(25);
+      const emails = await fetchReceiptEmails(60);
       if (emails.length === 0) {
         setGmailError("No receipt emails found in the last year.");
         return;
@@ -154,7 +154,8 @@ export default function ImportEmail() {
               <Sparkles size={15} className="text-brand-600" /> Connect Gmail
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
-              Read receipt emails from the last year and detect subscriptions automatically.
+              Scan up to 2 years of receipts — including Google Play &amp; past payments — and
+              detect subscriptions automatically.
             </p>
           </div>
           <button

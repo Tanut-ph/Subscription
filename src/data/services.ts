@@ -21,7 +21,7 @@ export interface ServiceDef {
 export const SERVICES: ServiceDef[] = [
   { name: "Netflix", keywords: ["netflix"], domains: ["netflix.com"], category: "Streaming", color: "#e50914", logo: "N", source: "NETFLIX.COM" },
   { name: "Spotify", keywords: ["spotify"], domains: ["spotify.com"], category: "Music", color: "#1db954", logo: "S", source: "SPOTIFY P" },
-  { name: "YouTube Premium", keywords: ["youtube premium", "youtube music", "google youtube"], domains: ["youtube.com", "google.com"], category: "Streaming", color: "#ff0000", logo: "YT", source: "GOOGLE *YOUTUBE" },
+  { name: "YouTube Premium", keywords: ["youtube premium", "youtube music", "google youtube"], domains: ["youtube.com"], category: "Streaming", color: "#ff0000", logo: "YT", source: "GOOGLE *YOUTUBE" },
   { name: "Disney+", keywords: ["disney+", "disney plus", "disneyplus"], domains: ["disneyplus.com"], category: "Streaming", color: "#0e6bff", logo: "D+", source: "DISNEYPLUS" },
   { name: "Apple iCloud+", keywords: ["icloud", "apple.com/bill", "apple one"], domains: ["apple.com"], category: "Cloud", color: "#3b3b3b", logo: "", source: "APPLE.COM/BILL" },
   { name: "Amazon Prime", keywords: ["amazon prime", "prime membership"], domains: ["amazon.com"], category: "Shopping", color: "#ff9900", logo: "P", source: "AMZN*PRIME" },
@@ -29,7 +29,7 @@ export const SERVICES: ServiceDef[] = [
   { name: "Claude Pro", keywords: ["claude", "anthropic"], domains: ["anthropic.com"], category: "AI", color: "#d97757", logo: "C", source: "ANTHROPIC" },
   { name: "Adobe Creative Cloud", keywords: ["adobe", "creative cloud"], domains: ["adobe.com"], category: "Software", color: "#fa0f00", logo: "Ai", source: "ADOBE" },
   { name: "Microsoft 365", keywords: ["microsoft 365", "office 365", "microsoft subscription"], domains: ["microsoft.com"], category: "Software", color: "#0078d4", logo: "M", source: "MICROSOFT*365" },
-  { name: "Google One", keywords: ["google one", "google storage"], domains: ["google.com"], category: "Cloud", color: "#4285f4", logo: "G1", source: "GOOGLE *ONE" },
+  { name: "Google One", keywords: ["google one", "google storage"], domains: ["one.google.com"], category: "Cloud", color: "#4285f4", logo: "G1", source: "GOOGLE *ONE" },
   { name: "Dropbox", keywords: ["dropbox"], domains: ["dropbox.com"], category: "Cloud", color: "#0061ff", logo: "Db", source: "DROPBOX" },
   { name: "Notion", keywords: ["notion"], domains: ["notion.so", "notion.com"], category: "Software", color: "#000000", logo: "No", source: "NOTION LABS" },
   { name: "GitHub", keywords: ["github"], domains: ["github.com"], category: "Software", color: "#24292f", logo: "Gh", source: "GITHUB" },
